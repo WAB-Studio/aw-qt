@@ -55,3 +55,15 @@ def test_the_tray_refuses_a_wrong_key_and_starts_nothing(tmp_path, monkeypatch):
     trayicon.TrayIcon._on_timelog_key(tray)
     assert warned and not path.exists()
     tray.manager.start.assert_not_called()
+
+
+def test_aw_timelog_is_found_inside_the_bundled_aw_client_folder(tmp_path):
+    from aw_qt import manager
+
+    folder = tmp_path / "aw-client"
+    folder.mkdir()
+    for name in ("aw-timelog", "aw-client"):
+        (folder / name).write_text("")
+        (folder / name).chmod(0o755)
+    names = {m.name for m in manager.filter_modules(manager._discover_modules_in_directory(str(tmp_path)))}
+    assert names == {"aw-timelog"}

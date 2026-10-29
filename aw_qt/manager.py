@@ -256,7 +256,8 @@ def _discover_modules_in_directory(path: str) -> List["Module"]:
     for path in matches:
         basename = os.path.basename(path)
         name = _filename_to_name(basename)
-        if name in ignored_filenames:
+        # Only files are ignored by name: the aw-client folder holds aw-timelog.
+        if name in ignored_filenames and not os.path.isdir(path):
             continue
         if is_executable(path, basename) and basename.startswith("aw-"):
             modules.append(Module(name, Path(path), "bundled"))
