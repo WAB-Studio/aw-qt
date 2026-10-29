@@ -14,6 +14,8 @@ from PyQt6 import QtCore
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import (
     QApplication,
+    QInputDialog,
+    QLineEdit,
     QMenu,
     QMessageBox,
     QPushButton,
@@ -21,7 +23,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from . import autostart
+from . import autostart, timelog
 from .config import persist_module_autostart
 from .manager import (
     NOTIFY_MODULE,
@@ -256,6 +258,28 @@ class TrayIcon(QSystemTrayIcon):
         # Always reflect the real state, the toggle may have failed
         self._refresh_autostart_action()
 
+    def _on_timelog_key(self) -> None:
+        current = timelog.read_key()
+        key, accepted = QInputDialog.getText(
+            self._parent,
+            "TimeLog",
+            "Pega la llave de TimeLog («Llaves» → «Crear llave»):",
+            QLineEdit.EchoMode.Password,
+            current,
+        )
+        if not accepted:
+            return
+        if not timelog.save_key(key):
+            QMessageBox.warning(
+                self._parent,
+                "TimeLog",
+                "Esa no es una llave de TimeLog: empieza por tl_ y tiene 46 caracteres.",
+            )
+            return
+        # The module reads the key before every upload; starting it covers one that was stopped.
+        self.manager.start(timelog.MODULE_NAME)
+        self.showMessage("TimeLog", "Llave guardada. La primera subida sale en menos de un minuto.")
+
     def on_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
             open_webui(self.root_url)
@@ -277,6 +301,11 @@ class TrayIcon(QSystemTrayIcon):
         menu.addAction("Open API Browser", lambda: open_apibrowser(self.root_url))
 
         menu.addSeparator()
+
+        if timelog.MODULE_NAME in [m.name for m in self.manager.modules]:
+            menu.addAction("TimeLog: pegar llave…", self._on_timelog_key)
+            menu.addAction("Abrir TimeLog", lambda: open_url(timelog.TIMELOG_URL))
+            menu.addSeparator()
 
         modulesMenu = menu.addMenu("Modules")
         self._build_modulemenu(modulesMenu)

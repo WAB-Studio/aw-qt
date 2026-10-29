@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 default_config = """
 [aw-qt]
-autostart_modules = ["aw-server", "aw-watcher-afk", "aw-watcher-window"]
+autostart_modules = ["aw-server", "aw-watcher-afk", "aw-watcher-window", "aw-timelog"]
 # Enable OS-level start-at-login on first launch (Research Edition builds
 # flip this to true; the user can still disable it from the tray afterwards).
 autostart_on_first_run = false

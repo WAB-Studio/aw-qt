@@ -98,7 +98,7 @@ class TestSetModuleAutostart:
         for line in source.splitlines():
             assert line in out
         doc = tomlkit.parse(out)
-        assert doc["aw-qt"]["autostart_modules"] == ["aw-server", "aw-watcher-window"]
+        assert doc["aw-qt"]["autostart_modules"] == ["aw-server", "aw-watcher-window", "aw-timelog"]
         assert "autostart_modules" not in doc["aw-qt-testing"]
 
     def test_missing_section_is_created(self):
@@ -108,6 +108,7 @@ class TestSetModuleAutostart:
             "aw-server",
             "aw-watcher-afk",
             "aw-watcher-window",
+            "aw-timelog",
             "aw-watcher-input",
         ]
 
@@ -150,11 +151,12 @@ class TestPersistModuleAutostart:
         # AwQtSettings writes the commented-out defaults on first load.
         AwQtSettings()
         assert persist_module_autostart("aw-watcher-afk", False)
-        assert AwQtSettings().autostart_modules == ["aw-server", "aw-watcher-window"]
+        assert AwQtSettings().autostart_modules == ["aw-server", "aw-watcher-window", "aw-timelog"]
         assert persist_module_autostart("aw-watcher-afk", True)
         assert AwQtSettings().autostart_modules == [
             "aw-server",
             "aw-watcher-window",
+            "aw-timelog",
             "aw-watcher-afk",
         ]
 
@@ -226,16 +228,17 @@ class TestProfileLocation:
         return AwQtSettings(profile=profile).autostart_modules
 
     def test_isolated_testing_writes_aw_qt_section_in_testing_root(self):
-        assert self._toggle_and_reload("testing") == ["aw-server", "aw-watcher-window"]
+        assert self._toggle_and_reload("testing") == ["aw-server", "aw-watcher-window", "aw-timelog"]
         path = _config_path("testing")
         assert "activitywatch-testing" in str(path)
         doc = tomlkit.parse(path.read_text())
-        assert doc["aw-qt"]["autostart_modules"] == ["aw-server", "aw-watcher-window"]
+        assert doc["aw-qt"]["autostart_modules"] == ["aw-server", "aw-watcher-window", "aw-timelog"]
         # The default profile is unaffected.
         assert AwQtSettings().autostart_modules == [
             "aw-server",
             "aw-watcher-afk",
             "aw-watcher-window",
+            "aw-timelog",
         ]
 
     def test_legacy_testing_writes_aw_qt_testing_section(self, tmp_path):
@@ -266,12 +269,13 @@ class TestProfileLocation:
         ]
 
     def test_named_profile_writes_its_isolated_file(self):
-        assert self._toggle_and_reload("research") == ["aw-server", "aw-watcher-window"]
+        assert self._toggle_and_reload("research") == ["aw-server", "aw-watcher-window", "aw-timelog"]
         assert "activitywatch-research" in str(_config_path("research"))
         assert AwQtSettings().autostart_modules == [
             "aw-server",
             "aw-watcher-afk",
             "aw-watcher-window",
+            "aw-timelog",
         ]
 
     def test_named_profile_on_pre_isolation_shared_section(self):
@@ -380,9 +384,9 @@ class TestTrayClick:
         with patch("aw_qt.manager._is_wayland", return_value=True):
             click(module)
             saved = AwQtSettings(profile).autostart_modules
-            assert _apply_wayland_substitutions(saved, {"aw-awatcher"}) == ["aw-server"]
+            assert _apply_wayland_substitutions(saved, {"aw-awatcher"}) == ["aw-server", "aw-timelog"]
         assert AwQtSettings().autostart_modules == [
-            "aw-server", "aw-watcher-afk", "aw-watcher-window"
+            "aw-server", "aw-watcher-afk", "aw-watcher-window", "aw-timelog"
         ]
 
     def test_wayland_stop_on_x11_keeps_x11_watchers(self):
