@@ -258,6 +258,13 @@ class TrayIcon(QSystemTrayIcon):
         # Always reflect the real state, the toggle may have failed
         self._refresh_autostart_action()
 
+    def _on_timelog_update(self) -> None:
+        timelog.request_update()
+        self.showMessage(
+            "TimeLog",
+            "Buscando una versión nueva. Si la hay, ActivityWatch se cierra y vuelve a abrir solo en un par de minutos.",
+        )
+
     def _on_timelog_key(self) -> None:
         current = timelog.read_key()
         key, accepted = QInputDialog.getText(
@@ -305,6 +312,7 @@ class TrayIcon(QSystemTrayIcon):
         if timelog.MODULE_NAME in [m.name for m in self.manager.modules]:
             menu.addAction("TimeLog: pegar llave…", self._on_timelog_key)
             menu.addAction("Abrir TimeLog", lambda: open_url(timelog.TIMELOG_URL))
+            menu.addAction("TimeLog: buscar actualización", self._on_timelog_update)
             menu.addSeparator()
 
         modulesMenu = menu.addMenu("Modules")

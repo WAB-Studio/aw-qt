@@ -67,3 +67,9 @@ def test_aw_timelog_is_found_inside_the_bundled_aw_client_folder(tmp_path):
         (folder / name).chmod(0o755)
     names = {m.name for m in manager.filter_modules(manager._discover_modules_in_directory(str(tmp_path)))}
     assert names == {"aw-timelog"}
+
+
+def test_the_tray_leaves_the_request_aw_timelog_looks_for(tmp_path):
+    timelog.request_update(str(tmp_path))
+    assert (tmp_path / "aw-timelog-update-request").exists()
+    assert timelog.UPDATE_REQUEST == "aw-timelog-update-request"
