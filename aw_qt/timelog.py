@@ -10,6 +10,8 @@ from aw_core import dirs
 MODULE_NAME = "aw-timelog"
 TIMELOG_URL = "https://timelog-delta.vercel.app"
 KEY_PATTERN = re.compile(r"tl_[A-Za-z0-9_-]{43}")
+# aw-timelog looks for this file every 30 seconds and checks for a new release at once.
+UPDATE_REQUEST = "aw-timelog-update-request"
 
 
 def config_path() -> str:
@@ -39,3 +41,9 @@ def save_key(key: str, path: Optional[str] = None) -> bool:
     with open(path, "w", encoding="utf-8") as file:
         file.write(tomlkit.dumps(document))
     return True
+
+
+def request_update(folder: Optional[str] = None) -> None:
+    path = os.path.join(folder or dirs.get_config_dir(MODULE_NAME), UPDATE_REQUEST)
+    with open(path, "w", encoding="utf-8"):
+        pass
