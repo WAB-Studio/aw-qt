@@ -265,6 +265,35 @@ class TrayIcon(QSystemTrayIcon):
             "Buscando una versión nueva. Si la hay, ActivityWatch se cierra y vuelve a abrir solo en un par de minutos.",
         )
 
+    def _on_gmail_connect(self) -> None:
+        timelog.request_gmail_connect()
+        # The module is a tick away from seeing the request; starting it covers one that was stopped.
+        self.manager.start(timelog.MODULE_NAME)
+        self.showMessage(
+            "Gmail",
+            "En unos segundos se abre el navegador para dar acceso de solo lectura a tu Gmail. Se necesitan gmail_client_id y gmail_client_secret en aw-timelog.toml.",
+        )
+
+    def _on_homefund_key(self) -> None:
+        key, accepted = QInputDialog.getText(
+            self._parent,
+            "HomeFund",
+            "Pega la llave de HomeFund para los correos del banco (empieza por whk_):",
+            QLineEdit.EchoMode.Password,
+            timelog.read_homefund_key(),
+        )
+        if not accepted:
+            return
+        if not timelog.save_homefund_key(key):
+            QMessageBox.warning(
+                self._parent,
+                "HomeFund",
+                "Esa no es una llave de HomeFund: empieza por whk_.",
+            )
+            return
+        self.manager.start(timelog.MODULE_NAME)
+        self.showMessage("HomeFund", "Llave guardada. Los correos del banco nuevos se envían desde ahora.")
+
     def _on_timelog_key(self) -> None:
         current = timelog.read_key()
         key, accepted = QInputDialog.getText(
@@ -313,6 +342,8 @@ class TrayIcon(QSystemTrayIcon):
             menu.addAction("TimeLog: pegar llave…", self._on_timelog_key)
             menu.addAction("Abrir TimeLog", lambda: open_url(timelog.TIMELOG_URL))
             menu.addAction("TimeLog: buscar actualización", self._on_timelog_update)
+            menu.addAction("Gmail: conectar cuenta…", self._on_gmail_connect)
+            menu.addAction("HomeFund: pegar llave…", self._on_homefund_key)
             menu.addSeparator()
 
         modulesMenu = menu.addMenu("Modules")

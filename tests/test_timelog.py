@@ -73,3 +73,28 @@ def test_the_tray_leaves_the_request_aw_timelog_looks_for(tmp_path):
     timelog.request_update(str(tmp_path))
     assert (tmp_path / "aw-timelog-update-request").exists()
     assert timelog.UPDATE_REQUEST == "aw-timelog-update-request"
+
+
+HOMEFUND_KEY = "whk_" + "c" * 32
+
+
+def test_the_tray_saves_a_pasted_homefund_key_and_refuses_a_wrong_one(tmp_path, monkeypatch):
+    from aw_qt import trayicon
+
+    path = tmp_path / "aw-timelog.toml"
+    monkeypatch.setattr(timelog, "config_path", lambda: str(path))
+    warned = []
+    monkeypatch.setattr(trayicon.QMessageBox, "warning", lambda *args: warned.append(args))
+    monkeypatch.setattr(trayicon.QInputDialog, "getText", lambda *args: (KEY, True))
+    tray = _tray()
+    trayicon.TrayIcon._on_homefund_key(tray)
+    assert warned and not path.exists()
+    monkeypatch.setattr(trayicon.QInputDialog, "getText", lambda *args: (f" {HOMEFUND_KEY}\n", True))
+    trayicon.TrayIcon._on_homefund_key(tray)
+    assert timelog.read_homefund_key(str(path)) == HOMEFUND_KEY
+    tray.manager.start.assert_called_once_with("aw-timelog")
+
+
+def test_the_tray_leaves_the_gmail_request_aw_timelog_looks_for(tmp_path):
+    timelog.request_gmail_connect(str(tmp_path))
+    assert (tmp_path / "aw-timelog-gmail-connect-request").exists()
