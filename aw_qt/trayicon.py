@@ -33,6 +33,7 @@ from .manager import (
     write_notify_enabled,
 )
 from .profile import DEFAULT_PROFILE, TESTING_PROFILE
+from .timelog_window import TimelogWindow
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +179,7 @@ class TrayIcon(QSystemTrayIcon):
         self._restart_timestamps: Dict[str, List[float]] = {}
         self._autostart_action: Optional[QAction] = None
         self._notify_action: Optional[QAction] = None
+        self._timelog_window: Optional[TimelogWindow] = None
 
         if port is None:
             port = 5666 if testing else 5600
@@ -290,8 +292,19 @@ class TrayIcon(QSystemTrayIcon):
             "En unos segundos se abre el navegador para dar acceso de solo lectura a tu Gmail.",
         )
 
-    def _on_enabled_toggled(self, name: str, checked: bool) -> None:
-        timelog.save_enabled(name, checked)
+    def _open_timelog_window(self) -> None:
+        if self._timelog_window is None:
+            self._timelog_window = TimelogWindow(
+                self._on_timelog_key,
+                self._on_homefund_key,
+                self._on_gmail_connect,
+                self._on_timelog_update,
+                lambda: open_url(timelog.TIMELOG_URL),
+            )
+        self._timelog_window.refresh()
+        self._timelog_window.show()
+        self._timelog_window.raise_()
+        self._timelog_window.activateWindow()
 
     def _on_homefund_key(self) -> None:
         key, accepted = QInputDialog.getText(
@@ -358,16 +371,7 @@ class TrayIcon(QSystemTrayIcon):
         menu.addSeparator()
 
         if timelog.MODULE_NAME in [m.name for m in self.manager.modules]:
-            for name, label in (("timelog_enabled", "TimeLog: subir mi tiempo"), ("gmail_enabled", "Gmail: reenviar correos del banco")):
-                action = menu.addAction(label)
-                action.setCheckable(True)
-                action.setChecked(timelog.read_enabled(name))
-                action.toggled.connect(lambda checked, name=name: self._on_enabled_toggled(name, checked))
-            menu.addAction("TimeLog: pegar llave…", self._on_timelog_key)
-            menu.addAction("Abrir TimeLog", lambda: open_url(timelog.TIMELOG_URL))
-            menu.addAction("TimeLog: buscar actualización", self._on_timelog_update)
-            menu.addAction("Gmail: conectar cuenta…", self._on_gmail_connect)
-            menu.addAction("HomeFund: pegar llave…", self._on_homefund_key)
+            menu.addAction("TimeLog y correos…", self._open_timelog_window)
             menu.addSeparator()
 
         modulesMenu = menu.addMenu("Modules")
