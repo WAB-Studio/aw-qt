@@ -98,3 +98,37 @@ def test_the_tray_saves_a_pasted_homefund_key_and_refuses_a_wrong_one(tmp_path, 
 def test_the_tray_leaves_the_gmail_request_aw_timelog_looks_for(tmp_path):
     timelog.request_gmail_connect(str(tmp_path))
     assert (tmp_path / "aw-timelog-gmail-connect-request").exists()
+
+
+GMAIL_LINE = "123-abc.apps.googleusercontent.com GOCSPX-abc_DEF-123"
+
+
+def test_connecting_asks_for_the_client_line_only_when_the_toml_lacks_it(tmp_path, monkeypatch):
+    from aw_qt import trayicon
+
+    path = tmp_path / "aw-timelog.toml"
+    monkeypatch.setattr(timelog, "config_path", lambda: str(path))
+    requests = []
+    monkeypatch.setattr(timelog, "request_gmail_connect", lambda: requests.append(1))
+    warned = []
+    monkeypatch.setattr(trayicon.QMessageBox, "warning", lambda *args: warned.append(args))
+    asked = []
+    monkeypatch.setattr(trayicon.QInputDialog, "getText", lambda *args: asked.append(1) or ("nope", True))
+    tray = _tray()
+    trayicon.TrayIcon._on_gmail_connect(tray)
+    assert warned and not requests and not path.exists()
+    monkeypatch.setattr(trayicon.QInputDialog, "getText", lambda *args: asked.append(1) or (f" {GMAIL_LINE}\n", True))
+    trayicon.TrayIcon._on_gmail_connect(tray)
+    assert requests == [1] and timelog.read_gmail_client_set(str(path))
+    asked.clear()
+    trayicon.TrayIcon._on_gmail_connect(tray)
+    assert asked == [] and requests == [1, 1]
+
+
+def test_the_switches_default_on_and_are_written_to_the_toml(tmp_path):
+    path = tmp_path / "aw-timelog.toml"
+    path.write_text("[aw-timelog]\ninterval_minutes = 15\n", encoding="utf-8")
+    assert timelog.read_enabled("gmail_enabled", str(path))
+    timelog.save_enabled("gmail_enabled", False, str(path))
+    assert not timelog.read_enabled("gmail_enabled", str(path)) and timelog.read_enabled("timelog_enabled", str(path))
+    assert "interval_minutes = 15" in path.read_text(encoding="utf-8")

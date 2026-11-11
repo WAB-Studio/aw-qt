@@ -266,13 +266,32 @@ class TrayIcon(QSystemTrayIcon):
         )
 
     def _on_gmail_connect(self) -> None:
+        if not timelog.read_gmail_client_set():
+            line, accepted = QInputDialog.getText(
+                self._parent,
+                "Gmail",
+                "Pega la línea de HomeFund → Ajustes → «Correos del banco» (cliente de Google):",
+                QLineEdit.EchoMode.Password,
+            )
+            if not accepted:
+                return
+            if not timelog.save_gmail_client(line):
+                QMessageBox.warning(
+                    self._parent,
+                    "Gmail",
+                    "Esa no es la línea del cliente: son dos partes separadas por un espacio, la primera termina en .apps.googleusercontent.com y la segunda empieza por GOCSPX-.",
+                )
+                return
         timelog.request_gmail_connect()
         # The module is a tick away from seeing the request; starting it covers one that was stopped.
         self.manager.start(timelog.MODULE_NAME)
         self.showMessage(
             "Gmail",
-            "En unos segundos se abre el navegador para dar acceso de solo lectura a tu Gmail. Se necesitan gmail_client_id y gmail_client_secret en aw-timelog.toml.",
+            "En unos segundos se abre el navegador para dar acceso de solo lectura a tu Gmail.",
         )
+
+    def _on_enabled_toggled(self, name: str, checked: bool) -> None:
+        timelog.save_enabled(name, checked)
 
     def _on_homefund_key(self) -> None:
         key, accepted = QInputDialog.getText(
@@ -339,6 +358,11 @@ class TrayIcon(QSystemTrayIcon):
         menu.addSeparator()
 
         if timelog.MODULE_NAME in [m.name for m in self.manager.modules]:
+            for name, label in (("timelog_enabled", "TimeLog: subir mi tiempo"), ("gmail_enabled", "Gmail: reenviar correos del banco")):
+                action = menu.addAction(label)
+                action.setCheckable(True)
+                action.setChecked(timelog.read_enabled(name))
+                action.toggled.connect(lambda checked, name=name: self._on_enabled_toggled(name, checked))
             menu.addAction("TimeLog: pegar llave…", self._on_timelog_key)
             menu.addAction("Abrir TimeLog", lambda: open_url(timelog.TIMELOG_URL))
             menu.addAction("TimeLog: buscar actualización", self._on_timelog_update)

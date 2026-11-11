@@ -15,6 +15,9 @@ UPDATE_REQUEST = "aw-timelog-update-request"
 # aw-timelog opens Google's consent page in the browser when it finds this file.
 GMAIL_CONNECT_REQUEST = "aw-timelog-gmail-connect-request"
 HOMEFUND_KEY_PATTERN = re.compile(r"whk_[A-Za-z0-9_-]{16,}")
+# HomeFund's Ajustes shows «<client_id> <client_secret>» on one line.
+GMAIL_CLIENT_ID_SUFFIX = ".apps.googleusercontent.com"
+GMAIL_CLIENT_SECRET_PREFIX = "GOCSPX-"
 
 
 def config_path() -> str:
@@ -61,6 +64,38 @@ def save_homefund_key(key: str, path: Optional[str] = None) -> bool:
     with open(path, "w", encoding="utf-8") as file:
         file.write(tomlkit.dumps(document))
     return True
+
+
+def read_gmail_client_set(path: Optional[str] = None) -> bool:
+    section = _read(path or config_path()).get(MODULE_NAME, {})
+    return bool(section.get("gmail_client_id")) and bool(section.get("gmail_client_secret"))
+
+
+def save_gmail_client(line: str, path: Optional[str] = None) -> bool:
+    """False for anything but «<client_id> <client_secret>»; the file is left as it was."""
+    parts = line.split()
+    if len(parts) != 2 or not parts[0].endswith(GMAIL_CLIENT_ID_SUFFIX) or not parts[1].startswith(GMAIL_CLIENT_SECRET_PREFIX):
+        return False
+    path = path or config_path()
+    document = _read(path)
+    section = document.setdefault(MODULE_NAME, tomlkit.table())
+    section["gmail_client_id"], section["gmail_client_secret"] = parts
+    with open(path, "w", encoding="utf-8") as file:
+        file.write(tomlkit.dumps(document))
+    return True
+
+
+def read_enabled(name: str, path: Optional[str] = None) -> bool:
+    """`timelog_enabled` or `gmail_enabled`; on unless the file says false."""
+    return _read(path or config_path()).get(MODULE_NAME, {}).get(name, True) is not False
+
+
+def save_enabled(name: str, enabled: bool, path: Optional[str] = None) -> None:
+    path = path or config_path()
+    document = _read(path)
+    document.setdefault(MODULE_NAME, tomlkit.table())[name] = bool(enabled)
+    with open(path, "w", encoding="utf-8") as file:
+        file.write(tomlkit.dumps(document))
 
 
 def request_gmail_connect(folder: Optional[str] = None) -> None:
